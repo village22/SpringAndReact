@@ -8,6 +8,8 @@ class SpinrgStudyApplicationTests {
 
     @Test
     void contextLoads() {
+
+
     }
 
 }
