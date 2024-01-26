@@ -8,11 +8,26 @@ spring:
     password: qwer1234!
     driver-class-name: org.mariadb.jdbc.Driver
 
+    hikari:
+      maximum-pool-size: 20
+
+
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
 
     properties:
       hibernate:
         show_sql: true
         format_sql: true
+        #dialect: org.hibernate.dialect.MariaDBDialect
+        #default_batch_fetch_size: 2
+
+
+logging:
+  level:
+    org.springframework: INFO
+    org.hibernate.type: trace
+    org.hibernate.type.descriptor.sql: trace
+    org.springframework.jdbc.core: TRACE
+    com.example: DEBUG
