@@ -28,6 +28,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web-services'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.3'
     implementation 'org.mapstruct:mapstruct:1.5.3.Final'
+    implementation 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.0'
 
     compileOnly 'org.projectlombok:lombok'
 
