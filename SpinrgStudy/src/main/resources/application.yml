@@ -30,4 +30,5 @@ logging:
     org.hibernate.type: trace
     org.hibernate.type.descriptor.sql: trace
     org.springframework.jdbc.core: TRACE
+    org.example: debug
 

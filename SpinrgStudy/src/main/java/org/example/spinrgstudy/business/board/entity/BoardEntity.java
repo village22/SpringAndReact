@@ -24,18 +24,12 @@ public class BoardEntity extends BaseEntity {
     @Lob
     private String content;
 
-    @OneToMany(mappedBy = "board", fetch = FetchType.LAZY)
-    private List<BoardReplyEntity> boardReply = new ArrayList<BoardReplyEntity>();
 
     @Builder
-    public BoardEntity(String title, String content, BoardReplyEntity boardReply) {
+    public BoardEntity(String title, String content) {
         this.title = title;
         this.content = content;
-        this.mapperBoardReply(boardReply);
     }
 
-    public void mapperBoardReply(BoardReplyEntity boardReply){
-        this.boardReply.add(boardReply);
-    }
 }
 

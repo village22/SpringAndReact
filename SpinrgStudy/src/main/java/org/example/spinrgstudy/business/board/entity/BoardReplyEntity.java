@@ -16,17 +16,12 @@ public class BoardReplyEntity {
     @Column(length = 1000)
     private String content;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
     private BoardEntity board;
 
     @Builder
     private BoardReplyEntity(String content, BoardEntity board) {
         this.content = content;
-        this.mapperBoard(board);
-    }
-
-    public void mapperBoard(BoardEntity board){
         this.board = board;
     }
 
