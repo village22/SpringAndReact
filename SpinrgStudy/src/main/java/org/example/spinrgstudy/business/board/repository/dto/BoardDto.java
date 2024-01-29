@@ -1,8 +1,9 @@
 package org.example.spinrgstudy.business.board.repository.dto;
 
 
-import lombok.*;
-import org.mapstruct.Mapper;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
 
 @Getter
 @Builder
