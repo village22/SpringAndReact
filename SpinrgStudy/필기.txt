@@ -1,0 +1,1498 @@
+
+* @Entity
+ JPA(Java Persistence API)에서 엔티티 클래스임을 나타내기 위해 사용됩니다. 엔티티는 데이터베이스에서 영속적으로 저장되고 관리되는 객체를 의미합니다.
+ 일반적으로 JPA 엔티티는 데이터베이스의 테이블과 매핑되며, @Entity 어노테이션이 붙은 클래스는 데이터베이스 테이블과 매핑되는 엔티티 클래스로 인식됩니다.
+
+ JPA에서 @Entity로 된 클래스를 Proxy 객체를 만들어서 관리된다.
+ 그래서 Join과 같은 어노테이션을 사용할때 fetch 전략에서 LAZY(지연로딩)과 같은 것을 사용할 수 있다. 지연 로딩의 경우 @Id를 사용할때는 쿼리 문을 동작시키지 않고, @Id를 제외한 나머지 부분을 사용할때 쿼리문을 동작시키는것으로 보인다. toString()을 포함.
+ Proxy를 만들 수 있도록 기본 생성자는 있어야 한다. public일 필요는 없다. protected 로 해도 된다.
+
+
+* @EntityListeners
+ - JPA에서 엔티티의 생명주기 이벤트를 수신하고 처리할 리스너를 지정하는 어노테이션입니다. 엔티티의 상태 변화에 대한 이벤트(예: 생성, 갱신, 삭제)가 발생할 때, 지정된 리스너가 해당 이벤트에 대한 콜백 메서드를 제공하여 특정 동작을 수행할 수 있습니다.
+    =============================
+        @Entity
+        @EntityListeners(MyEntityListener.class)
+        public class MyEntity {
+
+            @Id
+            @GeneratedValue(strategy = GenerationType.IDENTITY)
+            private Long id;
+
+            private String name;
+
+            // Getter, Setter 생략
+
+            // ...
+
+            // 엔티티가 저장되기 전에 호출될 콜백 메서드
+            @PrePersist
+            public void prePersist() {
+                System.out.println("MyEntity : Entity is about to be persisted.");
+                // 추가적인 로직 수행 가능
+            }
+        }
+    ---------------------
+        public class MyEntityListener {
+
+            @PrePersist
+            public void prePersist(Object entity) {
+                System.out.println("MyEntityListener : Entity is about to be persisted: " + entity);
+                // 추가적인 로직 수행 가능
+            }
+        }
+    =============================
+    ----- console -----
+    MyEntityListener : Entity is about to be persisted: org.example.spinrgstudy.MyEntity@4446e1d9
+    MyEntity : Entity is about to be persisted.
+    -------------------
+
+
+* @PrePersist, @PreUpdate
+ - JPA(Java Persistence API)에서 엔티티의 상태 변화가 일어나기 전에 실행되는 콜백 메서드를 지정할 때 사용됩니다.
+ - @PrePersist 어노테이션이 적용된 메서드는 엔티티가 영속성 컨텍스트에 저장되기 전에 호출됩니다. 주로 엔티티가 처음으로 영속성 컨텍스트에 저장되기 전에 필요한 초기화 작업을 수행하는 데 사용됩니다.
+ - @PreUpdate 어노테이션이 적용된 메서드는 엔티티의 데이터가 업데이트되기 전에 호출됩니다. 주로 엔티티가 업데이트되기 전에 필요한 작업을 수행하는 데 사용됩니다.
+    --------------------
+        @Getter
+        @MappedSuperclass
+        @NoArgsConstructor(access = AccessLevel.PROTECTED)
+        public abstract class BaseEntity {
+            @Column(name = "reg_dttm", updatable = false)
+            private ZonedDateTime regDateTime;
+
+            @Column(name = "mod_dttm")
+            private ZonedDateTime modDateTime;
+
+            @PrePersist
+            public void prePersist(){
+                this.regDateTime = ZonedDateTime.now();
+                this.modDateTime = this.regDateTime;
+            }
+
+            @PreUpdate
+            public void preUpdate(){
+                this.modDateTime = ZonedDateTime.now();
+            }
+        }
+    --------------------
+
+
+
+* @EnableJpaAuditing
+ - Spring Data JPA에서 제공하는 기능 중 하나로, 엔터티의 생성일자(@CreatedDate), 수정일자(@LastModifiedDate), 생성자(@CreatedBy), 수정자(@LastModifiedBy)를 자동으로 관리할 수 있도록 도와주는 어노테이션입니다. 이를 통해 엔터티의 변경 이력을 추적하거나, 특정 사용자가 언제 엔터티를 생성 또는 수정했는지를 기록할 수 있습니다.
+
+ @EnableJpaAuditing을 사용하기 위해서는 다음과 같은 단계를 따라야 합니다:
+
+    1. Spring Boot 프로젝트 설정:
+     @EnableJpaAuditing 어노테이션을 @SpringBootApplication 어노테이션이 위치한 클래스에 추가합니다.
+        ---------------------
+            import org.springframework.boot.SpringApplication;
+            import org.springframework.boot.autoconfigure.SpringBootApplication;
+            import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+
+            @SpringBootApplication
+            @EnableJpaAuditing
+            public class YourApplication {
+                public static void main(String[] args) {
+                    SpringApplication.run(YourApplication.class, args);
+                }
+            }
+        ---------------------
+
+    2. 엔터티 설정:
+     @CreatedDate, @LastModifiedDate, @CreatedBy, @LastModifiedBy 어노테이션을 엔터티 클래스의 필드에 추가합니다.
+        ---------------------
+            import org.springframework.data.annotation.CreatedDate;
+            import org.springframework.data.annotation.LastModifiedDate;
+            import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+            import javax.persistence.*;
+            import java.time.LocalDateTime;
+
+            @Entity
+            @EntityListeners(AuditingEntityListener.class)
+            public class YourEntity {
+                @Id
+                @GeneratedValue(strategy = GenerationType.IDENTITY)
+                private Long id;
+
+                // ... other fields
+
+                @CreatedDate
+                @Column(updatable = false)
+                private LocalDateTime createdAt;
+
+                @LastModifiedDate
+                private LocalDateTime updatedAt;
+
+                // ... other fields
+
+                // Getters and Setters
+            }
+        ---------------------
+
+     - @EntityListeners(AuditingEntityListener.class): JPA에서 제공하는 엔터티 리스너를 사용하도록 설정합니다.
+     - @CreatedDate, @LastModifiedDate: 엔터티의 생성일자와 수정일자를 관리하는 어노테이션입니다.
+
+    3. 설정 추가 (선택 사항):
+     - 필요에 따라 추가적인 설정을 할 수 있습니다. 예를 들어, @EnableJpaAuditing 어노테이션에 @EntityScan(basePackages = "your.entity.package")를 사용하여 엔터티가 위치한 패키지를 지정할 수 있습니다.
+
+    이제 @EnableJpaAuditing을 사용하여 엔터티의 생성일자, 수정일자, 생성자, 수정자를 자동으로 관리할 수 있게 되었습니다.
+
+
+* @MappedSuperclass
+ - JPA에서 부모 클래스를 정의하고 이를 상속받는 자식 클래스에서 공통 매핑 정보를 재사용할 때 사용되는 어노테이션입니다.
+    ---------------------
+        import javax.persistence.MappedSuperclass;
+        import javax.persistence.Id;
+        import javax.persistence.GeneratedValue;
+        import javax.persistence.GenerationType;
+
+        @Entity
+        @MappedSuperclass
+        public abstract class BaseEntity {
+
+            @Id
+            @GeneratedValue(strategy = GenerationType.IDENTITY)
+            private Long id;
+
+            // 다른 공통 필드 및 메소드들...
+        }
+    ---------------------
+        import javax.persistence.Entity;
+
+        @Entity
+        public class MyEntity extends BaseEntity {
+
+            // MyEntity의 특별한 필드들...
+
+        }
+    ---------------------
+
+
+* @Inheritance
+ - JPA(Java Persistence API)에서 상속 매핑 전략을 설정할 때 사용됩니다. JPA에서는 상속 구조를 가진 엔티티 클래스들을 매핑하는 방법을 설정할 수 있습니다. @Inheritance 어노테이션은 부모 클래스와 하위 클래스 간의 매핑 전략을 지정하는 데에 쓰입니다.
+
+    1. InheritanceType.SINGLE_TABLE : 단일 테이블 전략
+        - 모든 엔티티 클래스의 속성을 단일 테이블에 매핑합니다.
+        - 구분 컬럼(DTYPE 컬럼)을 사용하여 어떤 하위 클래스의 데이터인지 식별합니다.
+        - 장점: 단일 테이블을 사용하므로 테이블 간의 조인이 필요 없어 성능이 좋을 수 있습니다.
+        - 단점: 테이블에 모든 엔티티의 속성이 함께 저장되므로 테이블이 커질 수 있습니다.
+
+    2. InheritanceType.JOINED
+        - 각 엔티티 클래스마다 별도의 테이블을 생성합니다.
+        - 공통 속성을 가진 부모 클래스의 테이블은 생성되지 않습니다.
+        - 각 하위 클래스는 고유한 테이블을 가지며, 상위 클래스의 속성도 모두 복제됩니다.
+        - 장점: 각 클래스마다 특정 테이블이 있어 테이블 간 조인이 필요 없습니다.
+        - 단점: 상위 클래스의 속성이 각 하위 클래스에 중복 저장될 수 있습니다.
+
+    3. InheritanceType.TABLE_PER_CLASS
+        - 각 엔티티 클래스마다 별도의 테이블을 생성합니다.
+        - 부모 클래스와 각 하위 클래스는 조인 컬럼을 사용하여 연결됩니다.
+        - 상위 클래스의 속성은 별도의 테이블에 저장되고, 각 하위 클래스는 자신의 속성만 가진 테이블을 가집니다.
+        - 장점: 테이블이 정규화되어 중복 저장이 최소화됩니다.
+        - 단점: 테이블 간 조인이 필요하므로 성능에 영향을 미칠 수 있습니다.
+
+    ** @DiscriminatorColumn & @DiscriminatorValue
+        - @DiscriminatorColumn 어노테이션은 JPA(Java Persistence API)에서 상속 관계 매핑 시 사용되는 어노테이션 중 하나입니다. 이 어노테이션은 부모 테이블에 저장될 때 어떤 자식 엔티티인지를 구분하는 역할을 합니다. 주로 단일 테이블 전략(InheritanceType.SINGLE_TABLE)이나 조인 전략(InheritanceType.JOINED)에서 사용됩니다.
+        - @DiscriminatorColumn 어노테이션을 사용하면 부모 테이블에 추가적인 열(column)이 생성되어, 각각의 자식 엔티티를 식별하는 값을 저장합니다. 이 식별 값은 보통 문자열 형태로 저장되며, 자식 엔티티 클래스에 @DiscriminatorValue 어노테이션을 사용하여 어떤 값이 어떤 자식 엔티티를 나타내는지 설정합니다.
+
+
+    ==============================
+        @Entity
+        @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+        @DiscriminatorColumn(name = "ANIMAL_TYPE", discriminatorType = DiscriminatorType.STRING)
+        public class Animal {
+            @Id
+            @GeneratedValue(strategy = GenerationType.IDENTITY)
+            private Long id;
+
+            private String name;
+
+            // 공통 속성 및 메서드
+        }
+        -----------------------
+        @Entity
+        @DiscriminatorValue("BIRD")
+        public class Bird extends Animal {
+            private boolean canFly;
+
+            // Bird 특화 속성 및 메서드
+        }
+        -----------------------
+        @Entity
+        @DiscriminatorValue("MAMMAL")
+        public class Mammal extends Animal {
+            private boolean hasFur;
+
+            // Mammal 특화 속성 및 메서드
+        }
+    ==============================
+     - "Animal" 테이블 한개만 생성된다.
+     - 'ANIMAL_TYPE' 컬럼이 생성되어 "Bird"에 데이터를 넣으면 @DiscriminatorValue에서 지정한 'BIRD' 값이 들어 간다.
+
+    ==============================
+        ...
+        @Inheritance(strategy = InheritanceType.JOINED)
+        ...
+    ==============================
+     - "Animal" 테이블이 생성되며 id,name 컬럼이 생성되며 @DiscriminatorColumn를 사용했다면 해당되는 name의 컬럼이 추가 생성된다.
+     - "Cat" 테이블이 생성되며 지정된 'color' 컬럼과 '"Animal"의 id가 생성된다. Dog도 이와 같다.
+
+    ==============================
+        ...
+        @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+        ...
+    ==============================
+     - "Animal" 테이블은 생성되지 않고, "Cat", "Dog" 테이블만 생성되며 각 테이블에 "Animal"에 있던 컬럼이 각각 생성된다.
+
+
+* 기본 객체
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+@Entity
+@Table(name = "board_reply")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class BoardReplyEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(length = 1000)
+    private String content;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(nullable = false)
+    private BoardEntity board;
+
+    @Builder
+    public BoardReplyEntity(String content, BoardEntity board) {
+        this.content = content;
+        this.mapperBoard(board);
+    }
+
+    public void mapperBoard(BoardEntity board){
+        this.board = board;
+    }
+}
+--------------------------------------
+@Entity
+@Table(name = "board")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class BoardEntity extends BaseEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+1. EAGER 테스트    @Column(nullable = false)
+    private String title;
+
+    @Lob
+    private String content;
+
+
+	@OneToMany(mappedBy = "board", fetch = FetchType.EAGER)
+    private List<BoardReplyEntity> boardReply = new ArrayList<BoardReplyEntity>();
+
+    @Builder
+    public BoardEntity(String title, String content, BoardReplyEntity boardReply) {
+        this.title = title;
+        this.content = content;
+        this.mapperBoardReply(boardReply);
+    }
+
+    public void mapperBoardReply(BoardReplyEntity boardReply){
+        this.boardReply.add(boardReply);
+    }
+}
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+++++++++++ BoardReplyEntity 조회 ++++++++++
+
+1. find : BoardReplyEntity 기준 조회
+	-------------------------
+		BoardReplyEntity test = em.find(BoardReplyEntity.class, 1L);
+
+		if(test != null){
+			System.out.println("------");
+			System.out.println("데이터:"+test.getId()+", "+test.getContent());
+			System.out.println("------");
+
+			System.out.println("====================");
+			System.out.println("연결된 객체 사용:"+test.getBoard().getTitle());
+			System.out.println("====================");
+			System.out.println("------");
+			System.out.println("연결된 객체 사용 reaply0:"+test.getBoard().getBoardReply().get(0).getContent());
+			System.out.println("------");
+			System.out.println("연결된 객체 사용 reaply1:"+test.getBoard().getBoardReply().get(1).getContent());
+			System.out.println("------");
+		}
+	-------------------------
+
+
+	1.1 BoardReplyEntity(EAGER), BoardEntity(EAGER)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					bre1_0.id,
+					bre1_0.board_id,
+					b1_0.id,
+					b1_0.content,
+					b1_0.mod_dttm,
+					b1_0.reg_dttm,
+					b1_0.title,
+					bre1_0.content
+				from
+					board_reply bre1_0
+				join
+					board b1_0
+						on b1_0.id=bre1_0.board_id
+				where
+					bre1_0.id=?
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id=?
+			------
+			------
+			데이터:1, akakak23423
+			------
+			====================
+			------
+			연결된 객체 사용:테스트1
+			------
+			------
+			연결된 객체 사용 reaply0:akakak23423
+			------
+			연결된 객체 사용 reaply1:답글입니다.2
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+	1.2 BoardReplyEntity(LAZY), BoardEntity(EAGER)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					bre1_0.id,
+					bre1_0.board_id,
+					bre1_0.content
+				from
+					board_reply bre1_0
+				where
+					bre1_0.id=?
+			------
+			------
+			데이터:1, akakak23423
+			------
+			====================
+			------
+			Hibernate:
+				select
+					be1_0.id,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title,
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board be1_0
+				left join
+					board_reply br1_0
+						on be1_0.id=br1_0.board_id
+				where
+					be1_0.id=?
+			연결된 객체 사용:테스트1
+			------
+			------
+			연결된 객체 사용 reaply0:akakak23423
+			------
+			연결된 객체 사용 reaply1:답글입니다.2
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+	1.3 BoardReplyEntity(EAGER), BoardEntity(LAZY)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					bre1_0.id,
+					bre1_0.board_id,
+					b1_0.id,
+					b1_0.content,
+					b1_0.mod_dttm,
+					b1_0.reg_dttm,
+					b1_0.title,
+					bre1_0.content
+				from
+					board_reply bre1_0
+				join
+					board b1_0
+						on b1_0.id=bre1_0.board_id
+				where
+					bre1_0.id=?
+			------
+			------
+			데이터:1, akakak23423
+			------
+			====================
+			------
+			연결된 객체 사용:테스트1
+			------
+			------
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id=?
+			연결된 객체 사용 reaply0:akakak23423
+			------
+			연결된 객체 사용 reaply1:답글입니다.2
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+	1.4 BoardReplyEntity(LAZY), BoardEntity(LAZY)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					bre1_0.id,
+					bre1_0.board_id,
+					bre1_0.content
+				from
+					board_reply bre1_0
+				where
+					bre1_0.id=?
+			------
+			------
+			데이터:1, akakak23423
+			------
+			====================
+			------
+			Hibernate:
+				select
+					be1_0.id,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title
+				from
+					board be1_0
+				where
+					be1_0.id=?
+			연결된 객체 사용:테스트1
+			------
+			------
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id=?
+			연결된 객체 사용 reaply0:akakak23423
+			------
+			연결된 객체 사용 reaply1:답글입니다.2
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+2. createQuery : BoardReplyEntity 기준 조회
+	-------------------------
+		TypedQuery<BoardReplyEntity> query = em.createQuery("""
+			select e
+			from  BoardReplyEntity e
+				join e.board
+			where e.id in (1, 2)
+			""", BoardReplyEntity.class);
+
+		List<BoardReplyEntity> list = query.getResultList();
+
+		if(list != null){
+			System.out.println("------");
+			BoardReplyEntity test = list.get(0);
+			System.out.println("------");
+			System.out.println("데이터:"+test.getId()+", "+test.getContent());
+			System.out.println("------");
+
+			System.out.println("====================");
+			System.out.println("------");
+			System.out.println("연결된 객체 사용:"+test.getBoard().getTitle());
+			System.out.println("------");
+			System.out.println("------");
+			System.out.println("연결된 객체 사용 reaply0:"+test.getBoard().getBoardReply().get(0).getContent());
+			System.out.println("------");
+			System.out.println("연결된 객체 사용 reaply1:"+test.getBoard().getBoardReply().get(1).getContent());
+			System.out.println("------");
+		}
+	-------------------------
+
+	2.1 BoardReplyEntity(EAGER), BoardEntity(EAGER)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					bre1_0.id,
+					bre1_0.board_id,
+					bre1_0.content
+				from
+					board_reply bre1_0
+				where
+					bre1_0.id in (1, 2)
+			Hibernate:
+				select
+					be1_0.id,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title,
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board be1_0
+				left join
+					board_reply br1_0
+						on be1_0.id=br1_0.board_id
+				where
+					be1_0.id=?
+			------
+			------
+			데이터:1, akakak23423
+			------
+			====================
+			------
+			연결된 객체 사용:테스트1
+			------
+			------
+			연결된 객체 사용 reaply0:akakak23423
+			------
+			연결된 객체 사용 reaply1:답글입니다.2
+			------
+			========== 완료 ==========
+		----------------------------------
+
+	2.2 BoardReplyEntity(LAZY), BoardEntity(EAGER)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					bre1_0.id,
+					bre1_0.board_id,
+					bre1_0.content
+				from
+					board_reply bre1_0
+				where
+					bre1_0.id in (1, 2)
+			------
+			------
+			데이터:1, akakak23423
+			------
+			====================
+			------
+			Hibernate:
+				select
+					be1_0.id,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title,
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board be1_0
+				left join
+					board_reply br1_0
+						on be1_0.id=br1_0.board_id
+				where
+					be1_0.id=?
+			연결된 객체 사용:테스트1
+			------
+			------
+			연결된 객체 사용 reaply0:akakak23423
+			------
+			연결된 객체 사용 reaply1:답글입니다.2
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+	2.3 BoardReplyEntity(EAGER), BoardEntity(LAZY)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					bre1_0.id,
+					bre1_0.board_id,
+					bre1_0.content
+				from
+					board_reply bre1_0
+				where
+					bre1_0.id in (1, 2)
+			Hibernate:
+				select
+					be1_0.id,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title
+				from
+					board be1_0
+				where
+					be1_0.id=?
+			------
+			------
+			데이터:1, akakak23423
+			------
+			====================
+			------
+			연결된 객체 사용:테스트1
+			------
+			------
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id=?
+			연결된 객체 사용 reaply0:akakak23423
+			------
+			연결된 객체 사용 reaply1:답글입니다.2
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+	2.4 BoardReplyEntity(LAZY), BoardEntity(LAZY)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					bre1_0.id,
+					bre1_0.board_id,
+					bre1_0.content
+				from
+					board_reply bre1_0
+				where
+					bre1_0.id in (1, 2)
+			------
+			------
+			데이터:1, akakak23423
+			------
+			====================
+			------
+			Hibernate:
+				select
+					be1_0.id,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title
+				from
+					board be1_0
+				where
+					be1_0.id=?
+			연결된 객체 사용:테스트1
+			------
+			------
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id=?
+			연결된 객체 사용 reaply0:akakak23423
+			------
+			연결된 객체 사용 reaply1:답글입니다.2
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+4. createQuery fetch : BoardReplyEntity 기준 조회
+	-------------------------
+		TypedQuery<BoardReplyEntity> query = em.createQuery("""
+			select e
+			from  BoardReplyEntity e
+				join fetch e.board
+			where e.id in (1, 2)
+			""", BoardReplyEntity.class);
+
+		List<BoardReplyEntity> list = query.getResultList();
+
+		if(list != null){
+			System.out.println("------");
+			BoardReplyEntity test = list.get(0);
+			System.out.println("------");
+			System.out.println("데이터:"+test.getId()+", "+test.getContent());
+			System.out.println("------");
+
+			System.out.println("====================");
+			System.out.println("------");
+			System.out.println("연결된 객체 사용:"+test.getBoard().getTitle());
+			System.out.println("------");
+		}
+	-------------------------
+
+	4.1 BoardReplyEntity(EAGER), BoardEntity(EAGER)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					bre1_0.id,
+					bre1_0.board_id,
+					b1_0.id,
+					b1_0.content,
+					b1_0.mod_dttm,
+					b1_0.reg_dttm,
+					b1_0.title,
+					bre1_0.content
+				from
+					board_reply bre1_0
+				join
+					board b1_0
+						on b1_0.id=bre1_0.board_id
+				where
+					bre1_0.id in (1, 2)
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id=?
+			------
+			------
+			데이터:1, akakak23423
+			------
+			====================
+			------
+			연결된 객체 사용:테스트1
+			------
+			------
+			연결된 객체 사용 reaply0:akakak23423
+			------
+			연결된 객체 사용 reaply1:답글입니다.2
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+	4.2 BoardReplyEntity(LAZY), BoardEntity(EAGER)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					bre1_0.id,
+					bre1_0.board_id,
+					b1_0.id,
+					b1_0.content,
+					b1_0.mod_dttm,
+					b1_0.reg_dttm,
+					b1_0.title,
+					bre1_0.content
+				from
+					board_reply bre1_0
+				join
+					board b1_0
+						on b1_0.id=bre1_0.board_id
+				where
+					bre1_0.id in (1, 2)
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id=?
+			------
+			------
+			데이터:1, akakak23423
+			------
+			====================
+			------
+			연결된 객체 사용:테스트1
+			------
+			------
+			연결된 객체 사용 reaply0:akakak23423
+			------
+			연결된 객체 사용 reaply1:답글입니다.2
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+	4.3 BoardReplyEntity(EAGER), BoardEntity(LAZY)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					bre1_0.id,
+					bre1_0.board_id,
+					b1_0.id,
+					b1_0.content,
+					b1_0.mod_dttm,
+					b1_0.reg_dttm,
+					b1_0.title,
+					bre1_0.content
+				from
+					board_reply bre1_0
+				join
+					board b1_0
+						on b1_0.id=bre1_0.board_id
+				where
+					bre1_0.id in (1, 2)
+			------
+			------
+			데이터:1, akakak23423
+			------
+			====================
+			------
+			연결된 객체 사용:테스트1
+			------
+			------
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id=?
+			연결된 객체 사용 reaply0:akakak23423
+			------
+			연결된 객체 사용 reaply1:답글입니다.2
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+	4.4 BoardReplyEntity(LAZY), BoardEntity(LAZY)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					bre1_0.id,
+					bre1_0.board_id,
+					b1_0.id,
+					b1_0.content,
+					b1_0.mod_dttm,
+					b1_0.reg_dttm,
+					b1_0.title,
+					bre1_0.content
+				from
+					board_reply bre1_0
+				join
+					board b1_0
+						on b1_0.id=bre1_0.board_id
+				where
+					bre1_0.id in (1, 2)
+			------
+			------
+			데이터:1, akakak23423
+			------
+			====================
+			------
+			연결된 객체 사용:테스트1
+			------
+			------
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id=?
+			연결된 객체 사용 reaply0:akakak23423
+			------
+			연결된 객체 사용 reaply1:답글입니다.2
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+++++++++++ BoardEntity 조회 ++++++++++
+
+1. find : BoardEntity 기준 조회
+	-------------------------
+		BoardEntity test = em.find(BoardEntity.class, 1L);
+
+		if(test != null){
+			System.out.println("------");
+			System.out.println("데이터:"+test.getId()+", "+test.getContent());
+			System.out.println("------");
+
+			System.out.println("====================");
+			System.out.println("------");
+			System.out.println("연결된 객체 사용:"+test.getBoardReply().get(0).getContent());
+			System.out.println("------");
+			System.out.println("연결된 객체 사용:"+test.getBoardReply().get(1).getContent());
+			System.out.println("------");
+		}
+	-------------------------
+
+
+	1.1 BoardEntity(EAGER), BoardReplyEntity(EAGER)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					be1_0.id,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title,
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board be1_0
+				left join
+					board_reply br1_0
+						on be1_0.id=br1_0.board_id
+				where
+					be1_0.id=?
+			------
+			데이터:1, 내용입니다.1
+			------
+			====================
+			------
+			연결된 객체 사용:akakak23423
+			------
+			연결된 객체 사용:답글입니다.2
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+	1.2 BoardEntity(LAZY), BoardReplyEntity(EAGER)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					be1_0.id,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title
+				from
+					board be1_0
+				where
+					be1_0.id=?
+			------
+			데이터:1, 내용입니다.1
+			------
+			====================
+			------
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id=?
+			연결된 객체 사용:akakak23423
+			------
+			연결된 객체 사용:답글입니다.2
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+	1.3 BoardEntity(EAGER), BoardReplyEntity(LAZY)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					be1_0.id,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title,
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board be1_0
+				left join
+					board_reply br1_0
+						on be1_0.id=br1_0.board_id
+				where
+					be1_0.id=?
+			------
+			데이터:1, 내용입니다.1
+			------
+			====================
+			------
+			연결된 객체 사용:akakak23423
+			------
+			연결된 객체 사용:답글입니다.2
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+	1.4 BoardEntity(LAZY), BoardReplyEntity(LAZY)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					be1_0.id,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title
+				from
+					board be1_0
+				where
+					be1_0.id=?
+			------
+			데이터:1, 내용입니다.1
+			------
+			====================
+			------
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id=?
+			연결된 객체 사용:akakak23423
+			------
+			연결된 객체 사용:답글입니다.2
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+
+2. createQuery : BoardEntity 기준 조회
+	-------------------------
+		TypedQuery<BoardEntity> query = em.createQuery("""
+			select e
+			from  BoardEntity e
+				join e.boardReply
+			where e.id in (1,2)
+			""", BoardEntity.class);
+
+		List<BoardEntity> list = query.getResultList();
+
+		BoardEntity test = list.get(0);
+
+		System.out.println("------");
+		System.out.println("데이터:"+test.getId()+", "+test.getContent());
+		System.out.println("------");
+
+		System.out.println("====================");
+		System.out.println("------");
+		System.out.println("연결된 객체 사용:"+test.getBoardReply().get(0).getContent());
+		System.out.println("------");
+		System.out.println("연결된 객체 사용:"+test.getBoardReply().get(1).getContent());
+		System.out.println("------");
+		System.out.println("연결된 객체 사용:"+test.getBoardReply().get(2).getContent());
+		System.out.println("------");
+	-------------------------
+
+
+
+	1.1 BoardEntity(EAGER), BoardReplyEntity(EAGER)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					be1_0.id,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title
+				from
+					board be1_0
+				join
+					board_reply br1_0
+						on be1_0.id=br1_0.board_id
+				where
+					be1_0.id in (1, 2)
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id=?
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id=?
+			------
+			데이터:1, 내용입니다.1
+			------
+			====================
+			------
+			연결된 객체 사용:akakak23423
+			------
+			연결된 객체 사용:답글입니다.2
+			------
+			연결된 객체 사용:답글입니다.3
+			------
+			========== 완료 ==========
+		----------------------------------
+
+		** 'default_batch_fetch_size: 2' 를 주면
+		-------------------------
+			========== find ==========
+			Hibernate:
+				select
+					be1_0.id,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title
+				from
+					board be1_0
+				join
+					board_reply br1_0
+						on be1_0.id=br1_0.board_id
+				where
+					be1_0.id in (1, 2)
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id in (?, ?)
+			------
+			데이터:1, 내용입니다.1
+			------
+			====================
+			------
+			연결된 객체 사용:akakak23423
+			------
+			연결된 객체 사용:답글입니다.2
+			------
+			========== 완료 ==========
+		-------------------------
+
+
+	1.2 BoardEntity(LAZY), BoardReplyEntity(EAGER)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					be1_0.id,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title
+				from
+					board be1_0
+				join
+					board_reply br1_0
+						on be1_0.id=br1_0.board_id
+				where
+					be1_0.id in (1, 2)
+			------
+			데이터:1, 내용입니다.1
+			------
+			====================
+			------
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id=?
+			연결된 객체 사용:akakak23423
+			------
+			연결된 객체 사용:답글입니다.2
+			------
+			연결된 객체 사용:답글입니다.3
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+	1.3 BoardEntity(EAGER), BoardReplyEntity(LAZY)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					be1_0.id,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title
+				from
+					board be1_0
+				join
+					board_reply br1_0
+						on be1_0.id=br1_0.board_id
+				where
+					be1_0.id in (1, 2)
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id=?
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id=?
+			------
+			데이터:1, 내용입니다.1
+			------
+			====================
+			------
+			연결된 객체 사용:akakak23423
+			------
+			연결된 객체 사용:답글입니다.2
+			------
+			연결된 객체 사용:답글입니다.3
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+	1.4 BoardEntity(LAZY), BoardReplyEntity(LAZY)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					be1_0.id,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title
+				from
+					board be1_0
+				join
+					board_reply br1_0
+						on be1_0.id=br1_0.board_id
+				where
+					be1_0.id in (1, 2)
+			------
+			데이터:1, 내용입니다.1
+			------
+			====================
+			------
+			Hibernate:
+				select
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content
+				from
+					board_reply br1_0
+				where
+					br1_0.board_id=?
+			연결된 객체 사용:akakak23423
+			------
+			연결된 객체 사용:답글입니다.2
+			------
+			연결된 객체 사용:답글입니다.3
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+3. createQuery fetch : BoardEntity 기준 조회
+
+
+	3.1 BoardEntity(EAGER), BoardReplyEntity(EAGER)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					be1_0.id,
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title
+				from
+					board be1_0
+				join
+					board_reply br1_0
+						on be1_0.id=br1_0.board_id
+				where
+					be1_0.id in (1, 2)
+			------
+			데이터:1, 내용입니다.1
+			------
+			====================
+			------
+			연결된 객체 사용:akakak23423
+			------
+			연결된 객체 사용:답글입니다.2
+			------
+			연결된 객체 사용:답글입니다.3
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+	3.2 BoardEntity(LAZY), BoardReplyEntity(EAGER)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					be1_0.id,
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title
+				from
+					board be1_0
+				join
+					board_reply br1_0
+						on be1_0.id=br1_0.board_id
+				where
+					be1_0.id in (1, 2)
+			------
+			데이터:1, 내용입니다.1
+			------
+			====================
+			------
+			연결된 객체 사용:akakak23423
+			------
+			연결된 객체 사용:답글입니다.2
+			------
+			연결된 객체 사용:답글입니다.3
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+	3.3 BoardEntity(EAGER), BoardReplyEntity(LAZY)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					be1_0.id,
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title
+				from
+					board be1_0
+				join
+					board_reply br1_0
+						on be1_0.id=br1_0.board_id
+				where
+					be1_0.id in (1, 2)
+			------
+			데이터:1, 내용입니다.1
+			------
+			====================
+			------
+			연결된 객체 사용:akakak23423
+			------
+			연결된 객체 사용:답글입니다.2
+			------
+			연결된 객체 사용:답글입니다.3
+			------
+			========== 완료 ==========
+		----------------------------------
+
+
+	3.4 BoardEntity(LAZY), BoardReplyEntity(LAZY)
+		-------------- 결과 ---------------
+			========== find ==========
+			Hibernate:
+				select
+					be1_0.id,
+					br1_0.board_id,
+					br1_0.id,
+					br1_0.content,
+					be1_0.content,
+					be1_0.mod_dttm,
+					be1_0.reg_dttm,
+					be1_0.title
+				from
+					board be1_0
+				join
+					board_reply br1_0
+						on be1_0.id=br1_0.board_id
+				where
+					be1_0.id in (1, 2)
+			------
+			데이터:1, 내용입니다.1
+			------
+			====================
+			------
+			연결된 객체 사용:akakak23423
+			------
+			연결된 객체 사용:답글입니다.2
+			------
+			연결된 객체 사용:답글입니다.3
+			------
+			========== 완료 ==========
+		----------------------------------
