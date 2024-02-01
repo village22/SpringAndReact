@@ -134,6 +134,51 @@
      - @EntityListeners(AuditingEntityListener.class): JPA에서 제공하는 엔터티 리스너를 사용하도록 설정합니다.
      - @CreatedDate, @LastModifiedDate: 엔터티의 생성일자와 수정일자를 관리하는 어노테이션입니다.
 
+        ---------------------
+            @Entity
+            @EntityListeners(AuditingEntityListener.class)
+            public class YourEntity {
+                @Id
+                @GeneratedValue(strategy = GenerationType.IDENTITY)
+                private Long id;
+
+                // ... other fields
+
+                @CreatedBy
+                @Column(updatable = false)
+                private Long createId;
+
+                @LastModifiedBy
+                private Long updateId;
+
+                // ... other fields
+
+                // Getters and Setters
+            }
+            -----------------
+            @Configuration
+            @EnableJpaAuditing
+            public class JpaConfig {
+                @Bean
+                public AuditorAware<Long> auditorProvider() {
+                    return () -> {
+                        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+                        if (authentication == null || !authentication.isAuthenticated()) {
+                            return Optional.empty();
+                        }
+
+                        if (authentication.getPrincipal() instanceof JwtUserDto jwtUserDto) {
+                            return Optional.of(jwtUserDto.getCorporationUserId());
+                        }
+
+                        return Optional.empty();
+                    };
+                }
+            }
+
+        ---------------------
+
     3. 설정 추가 (선택 사항):
      - 필요에 따라 추가적인 설정을 할 수 있습니다. 예를 들어, @EnableJpaAuditing 어노테이션에 @EntityScan(basePackages = "your.entity.package")를 사용하여 엔터티가 위치한 패키지를 지정할 수 있습니다.
 
