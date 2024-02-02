@@ -1541,3 +1541,146 @@ public class BoardEntity extends BaseEntity {
 			------
 			========== 완료 ==========
 		----------------------------------
+
+================================================================================================================
+  * Spring Boot : Security 설정
+----------------------------------------------
+@Configuration
+@EnableWebSecurity
+public class SecurityConfigure extends SecurityConfigurerAdapter<DefaultSecurityFilterChain, HttpSecurity> {
+    private final JwtTokenConfigure jwtTokenConfigure;
+    private final JwtProvider jwtProvider;
+    private UsersRepository usersRepository;
+    private final EntryPointUnauthorizedHandler entryPointUnauthorizedHandler;
+    private static final String[] ALLOWED_URIS = {
+            "/api/v2/auth/**",
+            "/api/v2/user/find/**",
+            "/api/v2/user/change/pw",
+            "/api/v2/user/email/validate",
+            "/swagger-ui/**",
+            "/swagger-ui.html",
+            "/swagger-resources/**",
+            "/v3/api-docs/**",
+            "/assets/**",
+            "/webjars/**",
+            "/actuator/**",
+            "/",
+            "/instances",
+            "/error"
+    };
+
+    public SecurityConfigure(JwtTokenConfigure jwtTokenConfigure, JwtProvider jwtProvider, UsersRepository usersRepository, EntryPointUnauthorizedHandler entryPointUnauthorizedHandler) {
+        this.jwtTokenConfigure = jwtTokenConfigure;
+        this.jwtProvider = jwtProvider;
+        this.usersRepository = usersRepository;
+        this.entryPointUnauthorizedHandler = entryPointUnauthorizedHandler;
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder(){
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception{
+
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(Customizer.withDefaults())
+                .sessionManagement((sessionManagement) -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 세션 매니저 사용안한다는 설정
+
+                .authorizeHttpRequests((authorizeRequests) -> authorizeRequests.requestMatchers(ALLOWED_URIS).permitAll()) // 해당 페이지들은 권한 사용안함
+                .authorizeHttpRequests((authorizeRequests) -> authorizeRequests.requestMatchers("/api/v2/user/profile/modal").hasRole("ADMIN_ROLE")) // "ADMIN_ROLE" 권한이 있는 사용자만 접근 가능
+                .authorizeHttpRequests((authorizeRequests) -> authorizeRequests.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll())
+                .authorizeHttpRequests((authorizeRequests) -> authorizeRequests.anyRequest().authenticated()) // 토큰 인증을 사용하겠다는 의미
+                .exceptionHandling((exception) -> exception.authenticationEntryPoint(entryPointUnauthorizedHandler) // 인증되지 않은 사용자 처리 : EntryPointUnauthorizedHandler
+                        .accessDeniedHandler((request, response, accessDeniedException) -> { // 인증은 되었지만 권한이 없는 경우 처리할 핸들러
+                            accessDeniedException.printStackTrace();
+                            System.out.println("accessDeniedHandler:sldfjsdlkfjsdlkfjd");
+                            request.getRequestDispatcher("/error").forward(request, response);
+                        })
+                );
+
+
+
+        http
+                .addFilterBefore(new JwtAuthenticationTokenFilter(ALLOWED_URIS, jwtProvider,jwtTokenConfigure.getHeader(), usersRepository), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new JwtExceptionHandler(), JwtAuthenticationTokenFilter.class );
+
+        return http.build();
+    }
+}
+----------------------------------------------
+    - authorizeRequests.anyRequest().authenticated() 을 사용하게 되면 'SecurityContextHolder.getContext().setAuthentication(auth);' 를 사용해서 인증 정보를 넣어줘야 한다.
+----------------------------------------------
+@Component
+public class EntryPointUnauthorizedHandler implements AuthenticationEntryPoint {
+    @Override
+    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
+        authException.printStackTrace();
+        System.out.println("EntryPointUnauthorizedHandler:slkdjflkasdjflkajsdlkfjasdf");
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json; charset=UTF-8");
+
+        if(authException.getMessage() != null){
+            response.getWriter().write(authException.getMessage());
+        }
+        response.getWriter().flush();
+        response.getWriter().close();
+    }
+}
+------------------------------------
+public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
+
+    private final JwtProvider jwtProvider;
+    private final String headerKey;
+
+    private final List<String> ALLOWD_URIS;
+    private final UsersRepository usersRepository;
+    private  final AntPathMatcher antPathMatcher = new AntPathMatcher();
+
+    public JwtAuthenticationTokenFilter(String[] allowedUris, JwtProvider jwtProvider, String headerKey, UsersRepository usersRepository) {
+        this.ALLOWD_URIS = Arrays.asList(allowedUris);
+        this.jwtProvider = jwtProvider;
+        this.headerKey = headerKey;
+        this.usersRepository = usersRepository;
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        String path = request.getRequestURI();
+        boolean skip = ALLOWD_URIS.stream().anyMatch(excluded -> antPathMatcher.match(excluded, path));
+
+        if(skip){
+            filterChain.doFilter(request,response);
+        }else{
+            String authorizationToken = jwtProvider.obtainAuthorizationToken(request);
+            if (authorizationToken != null){
+                    List<GrantedAuthority> authorities = new ArrayList<>();
+                    authorities.add(new SimpleGrantedAuthority("USER_ROLE"));
+                    if (userKey != null && authorities.size() > 0) {
+                        Authentication auth = new UsernamePasswordAuthenticationToken(jwtUserDto, "", authorities);
+                        SecurityContextHolder.getContext().setAuthentication(auth);
+                    }
+                }catch (SignatureVerificationException signatureVerificationException){
+                    throw new TokenNotValidateException("잘못된 JWT 서명입니다.", signatureVerificationException);
+
+                }catch (TokenExpiredException tokenExpiredException){
+                    throw new TokenNotValidateException("만료된 JWT 토큰입니다.", tokenExpiredException);
+
+                }catch (InvalidClaimException invalidClaimException){
+                    throw new TokenNotValidateException("잘못된 정보입니다.", invalidClaimException);
+
+                }catch (JWTVerificationException jwtVerificationException){
+                    throw new TokenNotValidateException("JWT 토큰이 잘못되었습니다.", jwtVerificationException);
+                }catch (Exception e){
+                    throw new RuntimeException(e);
+                }
+            }
+            filterChain.doFilter(request,response);
+        }
+    }
+}
+
+------------------------------------
+
