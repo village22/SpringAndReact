@@ -1543,6 +1543,44 @@ public class BoardEntity extends BaseEntity {
 		----------------------------------
 
 ================================================================================================================
+  * Spring webflux
+- 동기 & 비동기 client
+
+    @ timeout 설정
+    ---------------------------------------
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000) // Connection time out 시간
+                .responseTimeout(Duration.ofMillis(5000)) // 응답시간
+                .doOnConnected(conn ->
+                        conn.addHandlerLast(new ReadTimeoutHandler(5000, TimeUnit.MILLISECONDS)) // 읽기 시간
+                                .addHandlerLast(new WriteTimeoutHandler(5000, TimeUnit.MILLISECONDS))); // 쓰기 시간
+
+        WebClient client = WebClient.builder()
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .build();
+    ---------------------------------------
+
+
+    @ 버퍼 사이즈
+     - 기본값은 256KB로 되어 있다.
+    ---------------------------------------
+    spring:
+      codec:
+        max-in-memory-size: 20MB
+    ----------- or -----------
+    //Memory 조정: 2M (default 256KB)
+    ExchangeStrategies exchangeStrategies = ExchangeStrategies.builder()
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(2*1024*1024))
+            .build();
+
+    WebClient client = WebClient.builder()
+            .exchangeStrategies(exchangeStrategies)
+            .build();
+    ---------------------------------------
+
+
+
+================================================================================================================
   * Spring Boot : Security 설정
 ----------------------------------------------
 @Configuration
