@@ -1729,8 +1729,7 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
 ** Spring Controller에 객체 바인딩
  - setter가 없으면 기본적으로 필드로 매핑한다.
  - 생성자로 통해 매핑을 진행하지 못하는 경우 setter를 먼저 찾고 setter도 존재하지 않으면 필드로 매핑한다.
- - 생성자가 protected 인 경우 위에서 설명한 것과 똑같이 진행한다.
- - 생성자가 private 인 경우 필드로 매핑
+ - 생성자가 private여도 마찬가지다.
 
 
 
