@@ -292,7 +292,72 @@
      - "Animal" 테이블은 생성되지 않고, "Cat", "Dog" 테이블만 생성되며 각 테이블에 "Animal"에 있던 컬럼이 각각 생성된다.
 
 
-* 기본 객체
+** JPA의 Entity 조회 별 상황
+ - JPQL(createQuery)로 조회 하는 경우에 결과는 영속성에 넣지만, 똑같은 JPQL를 사용해서 조회를 시도해도 영속된 데이터가 아닌 쿼리를 다시 실행하여 결과를 가져온다.
+ - 하지만 JPQL로 조회한 후 Entity로 조회하면 영속된 데이터에 있다면 그 데이터를 가져온다.
+
+# JPQL 2번 호출
+----------------------------
+    TypedQuery<BoardEntity> query = em.createQuery("""
+        select e
+        from BoardEntity e
+        where e.id in (1,2)
+        """, BoardEntity.class);
+
+    List<BoardEntity> list = query.getResultList();
+
+    BoardEntity test = list.get(0);
+
+    log.debug("------");
+    log.debug("데이터:"+test.getId()+", "+test.getContent());
+    log.debug("------");
+    log.debug("=======================================");
+
+    TypedQuery<BoardEntity> query1 = em.createQuery("""
+        select e
+        from BoardEntity e
+        where e.id in (1,2)
+        """, BoardEntity.class);
+
+    List<BoardEntity> list1 = query1.getResultList(); // 영속된 데이터가 아닌 다시 조회한다.
+
+    BoardEntity test1 = list1.get(0);
+
+    log.debug("------");
+    log.debug("데이터:"+test1.getId()+", "+test1.getContent());
+    log.debug("------");
+----------------------------
+
+# JPQL 호출 후 Entity 조회
+----------------------------
+    TypedQuery<BoardEntity> query = em.createQuery("""
+        select e
+        from BoardEntity e
+        where e.id in (1,2)
+        """, BoardEntity.class);
+
+    List<BoardEntity> list = query.getResultList();
+
+    BoardEntity test = list.get(0);
+
+    log.debug("------");
+    log.debug("데이터:"+test.getId()+", "+test.getContent());
+    log.debug("------");
+    log.debug("=======================================");
+
+    BoardEntity test1 = em.find(BoardEntity.class, 1L); // 위에서 조회된 결과를 가져옴. 영속된 데이터에서 가져온다.
+
+    log.debug("------");
+    log.debug("데이터:"+test1.getId()+", "+test1.getContent());
+    log.debug("------");
+----------------------------
+
+
+
+
+
+
+** JPA의 Entity 조회 별 상황
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 @Entity
 @Table(name = "board_reply")
