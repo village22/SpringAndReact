@@ -295,6 +295,7 @@
 ** JPA의 Entity 조회 별 상황
  - JPQL(createQuery)로 조회 하는 경우에 결과는 영속성에 넣지만, 똑같은 JPQL를 사용해서 조회를 시도해도 영속된 데이터가 아닌 쿼리를 다시 실행하여 결과를 가져온다.
  - 하지만 JPQL로 조회한 후 Entity로 조회하면 영속된 데이터에 있다면 그 데이터를 가져온다.
+ - SpringData를 사용하게 된다면, "@Query"를 사용하게 되면 호출할때마다 쿼리를 실행한다.
 
 # JPQL 2번 호출
 ----------------------------
@@ -1799,9 +1800,6 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
 
 
 ================================================================================
-
-
-
 ** 어노테이션 설명
 @Entity
  - 이 클래스를 테이블과 매핑한다고 JPA에 알려준다. 이 어노테이션을 사용한 클래스를 엔티티 클래스라 한다.
@@ -1825,5 +1823,37 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
  # 엔티티 매니저 팩토리 설정
 	- 엔티티 매니저 팩토리는 애플리케이션 전체에 딱 한 번만 생성하고 공유해서 사용해야 한다.
 	------------
-		EntityManagerFactory = Persistence.createEntityManagerFactory("jpabook")
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("jpabook")
 	------------
+
+ # 엔티티 매니저 생성
+    - 엔티티 매니저를 사용해서 엔티티를 데이터베이스에 등록/수정/삭제 조회할 수 있다.
+    - 데이터베이스 커넥션과 밀접한 관계가 있으므로 스레드 간에 공유하거나 재사용하면 안 된다.
+    ------------
+ 		EntityManager em = emf.createEntityManager();
+ 	------------
+
+ # 종료
+    - 엔티티 매니저는 다음 처럼 반드시 종료해야 한다.
+    ------------
+        em.close()
+    ------------
+
+    - 애플리케이션을 종료할 때 엔티티 매니저 팩토리도 다음처럼 종료해야 한다.
+    ------------
+        emf.close()
+    ------------
+
+** 트랜잭션 관리
+    ------------
+        EntityTransaction tx = em.getTransaction();
+        try{
+            tx.begin(); // 트랜잭션 시작
+
+            tx.commit(); // 트랜잭션 커밋
+        }catch(Exception e){
+            tx.rollback(); // 트랜잭션 롤백
+        }
+    ------------
+
+
