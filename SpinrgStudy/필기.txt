@@ -199,12 +199,12 @@
     ==============================
         ...
         @Inheritance(strategy = InheritanceType.JOINED)
+        public class Animal {
         ...
 
-        @PrimaryKeyJoinColumn(name = "dog_id")
+        @PrimaryKeyJoinColumn(name = "dog_id") // 부모 엔티티의 주 키 컬럼을 자식 엔티티의 주 키 컬럼으로 사용할 수 있습니다. "Animal" 테이블의 주 키를 'dog_id' 컬럼으로 사용. 사용하지 않아도 된다.
         public class Dog extends Animal {
 
-        @PrimaryKeyJoinColumn(name = "cat_id")
         public class Cat extends Animal {
     ==============================
      - "Animal" 테이블이 생성되며 id,name 컬럼이 생성되며 @DiscriminatorColumn를 사용했다면 어노테이션 속성 중 name으로 컬럼이 추가 생성된다.
