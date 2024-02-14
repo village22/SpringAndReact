@@ -179,30 +179,36 @@
         -----------------------
         @Entity
         @DiscriminatorValue("BIRD")
-        public class Bird extends Animal {
-            private boolean canFly;
+        public class Dog extends Animal {
+            private String breed;
 
-            // Bird 특화 속성 및 메서드
+            // Dog 특화 속성 및 메서드
         }
         -----------------------
         @Entity
         @DiscriminatorValue("MAMMAL")
-        public class Mammal extends Animal {
-            private boolean hasFur;
+        public class Cat extends Animal {
+            private String color;
 
-            // Mammal 특화 속성 및 메서드
+            // Cat 특화 속성 및 메서드
         }
     ==============================
      - "Animal" 테이블 한개만 생성된다.
-     - 'ANIMAL_TYPE' 컬럼이 생성되어 "Bird"에 데이터를 넣으면 @DiscriminatorValue에서 지정한 'BIRD' 값이 들어 간다.
+     - 'ANIMAL_TYPE' 컬럼이 생성되어 "Dog"에 데이터를 넣으면 @DiscriminatorValue에서 지정한 'BIRD' 값이 들어 간다.
 
     ==============================
         ...
         @Inheritance(strategy = InheritanceType.JOINED)
         ...
+
+        @PrimaryKeyJoinColumn(name = "dog_id")
+        public class Dog extends Animal {
+
+        @PrimaryKeyJoinColumn(name = "cat_id")
+        public class Cat extends Animal {
     ==============================
-     - "Animal" 테이블이 생성되며 id,name 컬럼이 생성되며 @DiscriminatorColumn를 사용했다면 해당되는 name의 컬럼이 추가 생성된다.
-     - "Cat" 테이블이 생성되며 지정된 'color' 컬럼과 '"Animal"의 id가 생성된다. Dog도 이와 같다.
+     - "Animal" 테이블이 생성되며 id,name 컬럼이 생성되며 @DiscriminatorColumn를 사용했다면 어노테이션 속성 중 name으로 컬럼이 추가 생성된다.
+     - "Cat" 테이블이 생성되며 지정된 'color' 컬럼과 '"Animal" 테이블의 id가 생성된다. Dog도 이와 같다.
 
     ==============================
         ...
