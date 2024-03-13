@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.example.spinrgstudy.common.entiry.BaseEntity;
+import org.hibernate.annotations.Comment;
+import org.springframework.http.HttpStatus;
 
 @Entity
 @Table(name = "board")
@@ -22,11 +24,15 @@ public class BoardEntity extends BaseEntity {
     @Lob
     private String content;
 
+    @Column
+    @Enumerated(EnumType.STRING)
+    private ReadType readType;
 
     @Builder
-    public BoardEntity(String title, String content) {
+    public BoardEntity(String title, String content, ReadType readType) {
         this.title = title;
         this.content = content;
+        this.readType = readType;
     }
 
 }

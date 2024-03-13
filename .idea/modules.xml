@@ -2,8 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/SpinrgStudy.main.iml" filepath="$PROJECT_DIR$/.idea/modules/SpinrgStudy.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/SpinrgStudy.test.iml" filepath="$PROJECT_DIR$/.idea/modules/SpinrgStudy.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/git_hub.iml" filepath="$PROJECT_DIR$/.idea/git_hub.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/org.example.SpinrgStudy.main.iml" filepath="$PROJECT_DIR$/.idea/modules/org.example.SpinrgStudy.main.iml" />
     </modules>
   </component>
 </project>

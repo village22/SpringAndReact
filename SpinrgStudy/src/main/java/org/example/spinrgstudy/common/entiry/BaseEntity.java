@@ -4,16 +4,18 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.example.spinrgstudy.business.board.entity.MyEntityListener;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.ZonedDateTime;
 
 
 @Getter
-@EntityListeners(AuditingEntityListener.class)
+@EntityListeners(MyEntityListener.class)
 @MappedSuperclass
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public abstract class BaseEntity {
+
     @Column(name = "reg_dttm", updatable = false)
     private ZonedDateTime regDateTime;
 
